@@ -5,27 +5,25 @@ import android.os.Bundle;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+
+import com.trello.rxlifecycle3.components.support.RxAppCompatActivity;
 
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.functions.Function;
 import io.reactivex.observers.DisposableObserver;
 import io.reactivex.schedulers.Schedulers;
 
 /**
- * CompositeDisposable管理写法
- * 1.使用subscribeWith，手动管理DisposeObserver。在onDestroy的时候手动清除
- * 2.在activity退出后直接结束，不回调onComplete方法
+ * RxLifeCycle写法
+ * 1.这种写法更好，可以使用subscribe不用使用subscribeWith，不用手动管理DisposeObserver
+ * 2.在activity退出后会回调Observer的onComplete方法
  */
-public class FirstActivity extends AppCompatActivity {
+public class SecondActivity extends RxAppCompatActivity {
 
     private final String TAG = getClass().getSimpleName();
-    private CompositeDisposable mCompositeDisposable = new CompositeDisposable();
-    ;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -36,7 +34,7 @@ public class FirstActivity extends AppCompatActivity {
 
     @SuppressLint("CheckResult")
     private void test() {
-        DisposableObserver disposableObserver = Observable.interval(0, 500, TimeUnit.MILLISECONDS)
+        Observable.interval(0, 500, TimeUnit.MILLISECONDS)
                 .take(100)
                 // map操作的书写位置要注意，如果是在线程里执行需要写在observeOn前面
                 .map(new Function<Long, Object>() {
@@ -48,7 +46,8 @@ public class FirstActivity extends AppCompatActivity {
                 })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribeWith(new DisposableObserver<Object>() {
+                .compose(bindToLifecycle())
+                .subscribe(new DisposableObserver<Object>() {
                     @Override
                     public void onNext(Object o) {
                         Log.d(TAG, "数据:" + o);
@@ -64,14 +63,10 @@ public class FirstActivity extends AppCompatActivity {
                         Log.e(TAG, e.toString(), e);
                     }
                 });
-        mCompositeDisposable.add(disposableObserver);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
-        // 如果退出程序，就清除后台任务
-        mCompositeDisposable.clear();
     }
 }
