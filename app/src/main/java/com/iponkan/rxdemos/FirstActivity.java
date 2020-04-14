@@ -32,8 +32,7 @@ public class FirstActivity extends RxAppCompatActivity {
 
     @SuppressLint("CheckResult")
     private void test() {
-//        mCompositeDisposable.add();
-        Observable.interval(0, 500, TimeUnit.MILLISECONDS)
+        DisposableObserver disposableObserver = Observable.interval(0, 500, TimeUnit.MILLISECONDS)
                 .take(10)
                 // map操作的书写位置要注意，如果是在线程里执行需要写在observeOn前面
                 .map(new Function<Long, Object>() {
@@ -45,7 +44,7 @@ public class FirstActivity extends RxAppCompatActivity {
                 })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new DisposableObserver<Object>() {
+                .subscribeWith(new DisposableObserver<Object>() {
                     @Override
                     public void onNext(Object o) {
                         Log.d(TAG, "数据:" + o);
@@ -61,6 +60,7 @@ public class FirstActivity extends RxAppCompatActivity {
                         Log.e(TAG, e.toString(), e);
                     }
                 });
+        mCompositeDisposable.add(disposableObserver);
     }
 
     @Override
